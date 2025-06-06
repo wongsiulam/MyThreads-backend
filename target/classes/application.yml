@@ -1,7 +1,5 @@
 server:
   port: 8081
-  servlet:
-    context-path: /api
 
 spring:
   application:
@@ -43,7 +41,7 @@ mybatis-plus:
 
 # JWT配置
 jwt:
-  secret: your-secret-key
+  secret: "a8f$2kL!9zQw3eR7tYp0sVx1cB4nM6jH"
   expiration: 86400000  # 24小时
 
 # 文件上传配置

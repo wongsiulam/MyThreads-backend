@@ -7,9 +7,12 @@ import org.springframework.web.bind.annotation.*;
 import com.socialconnect.service.UserService;
 import com.socialconnect.entity.User;
 import com.socialconnect.dto.RegisterRequest;
+import com.socialconnect.dto.LoginResponse;
+import com.socialconnect.util.JwtUtil;
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/api/user")
 public class UserController {
     @Autowired
     private UserService userService;
@@ -20,8 +23,10 @@ public class UserController {
     }
     
     @PostMapping("/login")
-    public User login(@RequestBody RegisterRequest request) {
-        return userService.login(request.getPhone(), request.getPassword());
+    public LoginResponse login(@RequestBody RegisterRequest request) {
+        User user = userService.login(request.getPhone(), request.getPassword());
+        String token = JwtUtil.generateToken(user.getId());
+        return new LoginResponse(token, user);
     }
 
     @GetMapping("/{id}")
@@ -37,5 +42,14 @@ public class UserController {
     @GetMapping("/check-phone")
     public boolean checkPhoneExists(@RequestParam String phone) {
         return userService.checkPhoneExists(phone);
+    }
+
+    @GetMapping("/me")
+    public User getCurrentUser(HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("currentUserId");
+        if (userId == null) {
+            throw new RuntimeException("未登录或Token无效");
+        }
+        return userService.getUserById(userId);
     }
 }
