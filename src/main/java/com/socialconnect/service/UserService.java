@@ -1,8 +1,9 @@
 package com.socialconnect.service;
 
 import com.socialconnect.entity.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
-public interface UserService {
+public interface UserService extends UserDetailsService {
     /**
      * 用户注册
      * @param phone 手机号

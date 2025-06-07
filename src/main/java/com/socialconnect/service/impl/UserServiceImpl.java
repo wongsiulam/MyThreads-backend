@@ -8,6 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import java.util.ArrayList; // 用于构建空的权限列表
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
 @Service
 public class UserServiceImpl implements UserService {
 
@@ -74,5 +78,21 @@ public class UserServiceImpl implements UserService {
         QueryWrapper<User> query = new QueryWrapper<>();
         query.eq("phone", phone);
         return userMapper.selectCount(query) > 0;
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String userIdStr) throws UsernameNotFoundException {
+        Long userId = Long.valueOf(userIdStr); // 将字符串转换为Long
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new UsernameNotFoundException("用户ID不存在: " + userIdStr);
+        }
+        // 构建 Spring Security 的 UserDetails 对象
+        // 第三个参数是权限列表，这里我们先给一个空的，后续可以根据用户角色添加
+        return new org.springframework.security.core.userdetails.User(
+                userIdStr, // 用户名（这里用用户ID的字符串形式）
+                user.getPassword(), // 密码（这里是加密后的密码）
+                new ArrayList<>() // 权限列表，目前为空
+        );
     }
 }
