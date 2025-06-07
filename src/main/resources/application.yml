@@ -24,6 +24,12 @@ spring:
         max-idle: 8
         max-active: 8
         max-wait: -1ms
+        
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
 
 # MyBatis-Plus配置
 mybatis-plus:
@@ -44,7 +50,9 @@ mybatis-plus:
 #   expiration: 86400000  # 24小时
 
 # 文件上传配置
-upload:
-  path: /upload/
-  allowed-types: jpg,jpeg,png,gif
-  max-size: 10MB 
+file:
+  upload:
+    upload-dir: ./uploads
+    max-size: 5242880  # 5MB
+    allowed-types: jpg,jpeg,png,gif
+    base-url:  http://localhost:${server.port} 

@@ -26,6 +26,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String token = request.getHeader("Authorization");
 
+        // 检查是否是静态资源请求
+        if (request.getRequestURI().startsWith("/uploads/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         if (request.getRequestURI().startsWith("/api/user/login") ||
             request.getRequestURI().startsWith("/api/user/register") ||
             request.getRequestURI().startsWith("/api/user/check-phone")) {
@@ -38,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 if (JwtUtil.validateToken(token)) {
                     Long userId = JwtUtil.getUserIdFromToken(token);
-                    
+                    // 设置认证信息
                     UserDetails userDetails = userService.loadUserByUsername(String.valueOf(userId));
                     
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
@@ -46,7 +52,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     
                     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                    request.setAttribute("currentUserId", userId);
+                    // 设置用户ID到请求属性中
+                    request.setAttribute("userId", userId);
 
                 } else {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

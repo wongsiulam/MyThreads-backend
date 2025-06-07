@@ -18,6 +18,7 @@ public class SecurityConfig {
             .csrf().disable()
             .authorizeRequests()
                 .antMatchers("/api/user/login", "/api/user/register", "/api/user/check-phone").permitAll()  //验证放行的路径
+                .antMatchers("/uploads/**").permitAll()  // 允许访问上传的文件
                 .anyRequest().authenticated()
             .and()
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
