@@ -9,6 +9,7 @@ import com.socialconnect.entity.User;
 import com.socialconnect.dto.RegisterRequest;
 import com.socialconnect.dto.LoginResponse;
 import com.socialconnect.util.JwtUtil;
+import com.socialconnect.util.Result;
 import javax.servlet.http.HttpServletRequest;
 
 @RestController
@@ -35,8 +36,35 @@ public class UserController {
     }
 
     @PutMapping("/{update}")
-    public Boolean updateUser(@RequestBody User user) {
-        return userService.updateUser(user);
+    public Result<?> updateUser(@RequestBody User user, 
+                              @RequestParam(required = false) String oldPassword,
+                              @RequestParam(required = false) String newPassword,
+                              HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        if (userId == null) {
+            return Result.error("未登录或Token无效");
+        }
+        user.setId(userId);
+
+        // 如果提供了密码，则进行密码修改
+        if (oldPassword != null && newPassword != null) {
+            boolean success = userService.changePassword(userId, oldPassword, newPassword);
+            if (!success) {
+                return Result.error("修改密码失败");
+            }
+        } else if (user.getPassword() != null) {
+            // 如果请求体中包含密码，但没有提供旧密码和新密码参数，则认为是非法操作，或者忽略此字段
+            // 这里的处理方式是忽略请求体中的密码字段，强制通过参数修改密码
+            user.setPassword(null);
+        }
+
+        // 更新其他用户信息
+        boolean success = userService.updateUser(user);
+        if (!success) {
+            return Result.error("更新用户信息失败");
+        }
+
+        return Result.success(userService.getUserById(userId));
     }
 
     @GetMapping("/check-phone")
@@ -46,7 +74,7 @@ public class UserController {
 
     @GetMapping("/me")
     public User getCurrentUser(HttpServletRequest request) {
-        Long userId = (Long) request.getAttribute("currentUserId");
+        Long userId = (Long) request.getAttribute("userId");
         if (userId == null) {
             throw new RuntimeException("未登录或Token无效");
         }

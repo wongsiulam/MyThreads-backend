@@ -7,6 +7,7 @@ import com.socialconnect.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList; // 用于构建空的权限列表
 import org.springframework.security.core.userdetails.UserDetails;
@@ -94,5 +95,28 @@ public class UserServiceImpl implements UserService {
                 user.getPassword(), // 密码（这里是加密后的密码）
                 new ArrayList<>() // 权限列表，目前为空
         );
+    }
+
+
+    @Override
+    public boolean changePassword(Long userId, String oldPassword, String newPassword) {
+        User user = getUserById(userId);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+
+        // 验证旧密码
+        String encryptedOldPwd = DigestUtils.md5DigestAsHex(oldPassword.getBytes());
+        System.out.println("旧密码加密后: " + encryptedOldPwd);
+        System.out.println("数据库中存储的密码: " + user.getPassword());
+        if (!encryptedOldPwd.equals(user.getPassword())) {
+            throw new RuntimeException("旧密码错误");
+        }
+
+        // 更新新密码
+        String encryptedNewPwd = DigestUtils.md5DigestAsHex(newPassword.getBytes());
+        user.setPassword(encryptedNewPwd);
+
+        return updateUser(user);
     }
 }
