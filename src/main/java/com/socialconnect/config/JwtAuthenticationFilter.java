@@ -24,20 +24,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        String requestURI = request.getRequestURI();
+
+        // **所有无需Token验证的公共路径**
+        // 明确允许访问认证相关的API和静态资源（HTML, CSS, JS文件）
+        if (requestURI.startsWith("/api/user/login") ||
+            requestURI.startsWith("/api/user/register") ||
+            requestURI.startsWith("/api/user/check-phone") ||
+            requestURI.startsWith("/uploads/") || // 允许访问上传目录
+            requestURI.equals("/login.html") ||   // 明确允许访问登录页面
+            requestURI.equals("/test.html") ||    // 明确允许访问测试页面
+            requestURI.equals("/") ||             // 允许访问根路径
+            requestURI.endsWith(".html") ||       // 允许所有HTML文件
+            requestURI.endsWith(".css") ||        // 允许所有CSS文件
+            requestURI.endsWith(".js")) {         // 允许所有JS文件
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String token = request.getHeader("Authorization");
-
-        // 检查是否是静态资源请求
-        if (request.getRequestURI().startsWith("/uploads/")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if (request.getRequestURI().startsWith("/api/user/login") ||
-            request.getRequestURI().startsWith("/api/user/register") ||
-            request.getRequestURI().startsWith("/api/user/check-phone")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
 
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
@@ -51,26 +56,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             userDetails, null, userDetails.getAuthorities());
                     
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                    // 设置用户ID到请求属性中
-                    request.setAttribute("userId", userId);
+                    request.setAttribute("userId", userId); // 设置用户ID到请求属性中
 
                 } else {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json;charset=UTF-8");
-                    response.getWriter().write("{\"error\": \"Invalid or expired token\"}");
+                    response.getWriter().write("{\"code\": 401, \"msg\": \"Token已过期或无效\"}");
                     return;
                 }
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"error\": \"Authentication error: " + e.getMessage() + "\"}");
+                response.getWriter().write("{\"code\": 401, \"msg\": \"认证错误: " + e.getMessage() + "\"}");
                 return;
             }
         } else {
+            // 如果没有Token或者Token格式不正确，并且不是公共路径，则返回未授权错误
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\": \"Authorization token is missing\"}");
+            response.getWriter().write("{\"code\": 401, \"msg\": \"请先登录\"}");
             return;
         }
         

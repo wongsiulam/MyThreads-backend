@@ -24,10 +24,10 @@ public class UserController {
     }
     
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody RegisterRequest request) {
+    public Result<LoginResponse> login(@RequestBody RegisterRequest request) {
         User user = userService.login(request.getPhone(), request.getPassword());
         String token = JwtUtil.generateToken(user.getId());
-        return new LoginResponse(token, user);
+        return Result.success(new LoginResponse(token, user));
     }
 
     @GetMapping("/{id}")

@@ -17,8 +17,18 @@ public class SecurityConfig {
         http
             .csrf().disable()
             .authorizeRequests()
-                .antMatchers("/api/user/login", "/api/user/register", "/api/user/check-phone").permitAll()  //验证放行的路径
-                .antMatchers("/uploads/**").permitAll()  // 允许访问上传的文件
+                .antMatchers(
+                    "/api/user/login", 
+                    "/api/user/register", 
+                    "/api/user/check-phone",
+                    "/uploads/**",              // 允许访问上传的文件
+                    "/login.html",              // 允许访问登录页面
+                    "/test.html",               // 允许访问测试页面
+                    "/",                        // 允许访问根路径
+                    "/**/*.html",               // 允许所有HTML文件
+                    "/**/*.css",                // 允许所有CSS文件
+                    "/**/*.js"                  // 允许所有JS文件
+                ).permitAll()  // 验证放行的路径
                 .anyRequest().authenticated()
             .and()
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
