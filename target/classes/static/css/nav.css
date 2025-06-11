@@ -1,0 +1,38 @@
+.nav-container {
+    background-color: #343a40;
+    padding: 10px 0;
+    margin-bottom: 20px;
+}
+
+.nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.nav-item {
+    position: relative;
+}
+
+.nav-item a {
+    color: #fff;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.nav-item a:hover {
+    background-color: #495057;
+}
+
+.nav-item.active a {
+    background-color: #007bff;
+}
+
+.nav-item.active a:hover {
+    background-color: #0056b3;
+} 

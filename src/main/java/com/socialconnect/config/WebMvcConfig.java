@@ -6,6 +6,12 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+// Spring MVC 的配置类，负责：
+// 配置跨域请求处理（CORS）
+// 配置静态资源访问
+// 配置视图解析器
+// 配置消息转换器
+
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
     @Value("${file.upload.upload-dir}")

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社交关系测试</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/nav.css" rel="stylesheet">
+    <style>
+        .container { margin-top: 30px; }
+        .card { margin-bottom: 20px; }
+        .btn-group { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <div class="nav-container">
+        <ul class="nav-list">
+            <li class="nav-item active">
+                <a href="/social.html">社交关系</a>
+            </li>
+            <li class="nav-item">
+                <a href="/test.html">帖子测试</a>
+            </li>
+            <li class="nav-item">
+                <a href="/chat.html">聊天测试</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <h2>社交关系测试</h2>
+        
+        <!-- 用户操作区 -->
+        <div class="card">
+            <div class="card-header">
+                <h4>用户操作</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">当前用户ID</label>
+                            <input type="number" class="form-control" id="currentUserId" value="" readonly placeholder="自动获取用户ID">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">目标用户ID</label>
+                            <input type="number" class="form-control" id="targetUserId" value="2" placeholder="请输入目标用户ID">
+                        </div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="sendFriendRequest()">发送好友请求</button>
+                    <button class="btn btn-success" onclick="followUser()">关注用户</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 好友请求列表 -->
+        <div class="card">
+            <div class="card-header">
+                <h4>好友请求</h4>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-info mb-3" onclick="getFriendRequests()">刷新好友请求</button>
+                <div id="friendRequests"></div>
+            </div>
+        </div>
+
+        <!-- 好友列表 -->
+        <div class="card">
+            <div class="card-header">
+                <h4>好友列表</h4>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-info mb-3" onclick="getFriends()">刷新好友列表</button>
+                <div id="friendsList"></div>
+            </div>
+        </div>
+
+        <!-- 关注列表 -->
+        <div class="card">
+            <div class="card-header">
+                <h4>关注列表</h4>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-info mb-3" onclick="getFollowing()">刷新关注列表</button>
+                <div id="followingList"></div>
+            </div>
+        </div>
+
+        <!-- 粉丝列表 -->
+        <div class="card">
+            <div class="card-header">
+                <h4>粉丝列表</h4>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-info mb-3" onclick="getFollowers()">刷新粉丝列表</button>
+                <div id="followersList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const currentUserId = document.getElementById('currentUserId');
+        const targetUserId = document.getElementById('targetUserId');
+
+        // 检查登录状态：如果未登录则跳转到登录页面
+        function checkLogin() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return false;
+            }
+            return true;
+        }
+
+        // 退出登录：清除token并跳转到登录页面
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        // 统一的 fetch 请求辅助函数，处理 Authorization 头和错误
+        async function authorizedFetch(url, options = {}) {
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json', // 默认请求体是JSON
+                ...options.headers, // 允许覆盖或添加更多headers
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(url, {
+                ...options,
+                headers: headers,
+            });
+
+            if (!response.ok) { // 如果响应状态码不是 2xx
+                let errorMessage = `请求失败 (${response.status} ${response.statusText})`;
+                try {
+                    // 尝试解析JSON，即使是错误响应
+                    const errorData = await response.json();
+                    if (errorData && errorData.msg) {
+                        errorMessage = errorData.msg;
+                    } else if (errorData) {
+                        errorMessage = JSON.stringify(errorData);
+                    }
+                } catch (jsonError) {
+                    // 如果响应不是JSON，尝试获取文本内容
+                    const responseText = await response.text();
+                    if (responseText) {
+                        errorMessage = `请求失败 (${response.status} ${response.statusText}): ${responseText.substring(0, 100)}...`;
+                    }
+                }
+
+                if (response.status === 401) {
+                    alert('登录状态已失效，请重新登录。');
+                    logout();
+                } else {
+                    alert('错误: ' + errorMessage);
+                }
+                throw new Error(errorMessage); // 抛出错误，中断后续处理
+            }
+
+            // 如果响应状态码是 2xx，尝试解析JSON
+            try {
+                return await response.json();
+            } catch (jsonParseError) {
+                // 如果是 204 No Content，可能没有响应体
+                if (response.status === 204) {
+                    return null;
+                }
+                // 其他情况，表示期望JSON但不是JSON
+                throw new Error('解析响应失败：非JSON格式或JSON不完整');
+            }
+        }
+
+        // 设置当前页面的导航项为激活状态
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPage = window.location.pathname;
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                const link = item.querySelector('a');
+                if (link.getAttribute('href') === currentPage) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // 页面加载时检查登录状态并刷新列表
+            if (checkLogin()) {
+                const storedUserId = localStorage.getItem('userId');
+                // 自动填充当前用户ID
+                document.getElementById('currentUserId').value = storedUserId || '';
+                console.log('DOMContentLoaded: localStorage userId =', storedUserId);
+                console.log('DOMContentLoaded: currentUserId.value =', document.getElementById('currentUserId').value);
+
+                if (storedUserId) {
+                    getFriendRequests();
+                    getFriends();
+                    getFollowing();
+                    getFollowers();
+                } else {
+                    alert('当前用户ID为空。请确保已登录并获取到用户ID。');
+                    // 可以选择跳转到登录页面或者禁用所有功能
+                }
+            }
+        });
+
+        // 辅助函数：验证用户ID是否有效
+        function validateUserId() {
+            if (!currentUserId.value) {
+                alert('当前用户ID为空。请确保已登录并获取到用户ID。');
+                console.error('当前用户ID为空。');
+                return false;
+            }
+            return true;
+        }
+
+        // 发送好友请求
+        async function sendFriendRequest() {
+            if (!checkLogin() || !validateUserId()) return;
+            try {
+                const data = await authorizedFetch(`/api/friends/request/${currentUserId.value}/${targetUserId.value}`, {
+                    method: 'POST'
+                });
+                if (data && data.code === 200) { // 检查data是否存在且code为200
+                    alert('好友请求已发送');
+                    getFriendRequests();
+                } else {
+                     // 错误已由authorizedFetch处理，这里不需要额外alert
+                    console.error('发送好友请求失败：', data);
+                }
+            } catch (error) {
+                // 错误已由authorizedFetch处理，这里不需要额外alert
+                console.error('发送好友请求失败：', error);
+            }
+        }
+
+        // 关注用户
+        async function followUser() {
+            if (!checkLogin() || !validateUserId()) return;
+            try {
+                const data = await authorizedFetch(`/api/follows/${currentUserId.value}/${targetUserId.value}`, {
+                    method: 'POST'
+                });
+                if (data && data.code === 200) { // 检查data是否存在且code为200
+                    alert('关注成功');
+                    getFollowing();
+                } else {
+                    console.error('关注失败：', data);
+                }
+            } catch (error) {
+                console.error('关注失败：', error);
+            }
+        }
+
+        // 获取好友请求列表
+        async function getFriendRequests() {
+            if (!checkLogin() || !validateUserId()) return;
+            try {
+                const data = await authorizedFetch(`/api/friends/requests/${currentUserId.value}`);
+                const container = document.getElementById('friendRequests');
+                if (data && data.code === 200 && Array.isArray(data.data)) {
+                    container.innerHTML = data.data.map(request => `
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <p>来自用户ID: ${request.userId}</p>
+                                <button class="btn btn-success btn-sm" onclick="acceptFriendRequest(${request.id})">接受</button>
+                                <button class="btn btn-danger btn-sm" onclick="rejectFriendRequest(${request.id})">拒绝</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="alert alert-info">暂无好友请求</div>';
+                }
+            } catch (error) {
+                console.error('获取好友请求失败：', error);
+            }
+        }
+
+        // 接受好友请求
+        async function acceptFriendRequest(requestId) {
+            if (!checkLogin() || !validateUserId()) return; // 确保用户ID有效
+            try {
+                const data = await authorizedFetch(`/api/friends/accept/${requestId}`, {
+                    method: 'PUT'
+                });
+                if (data && data.code === 200) {
+                    alert('已接受好友请求');
+                    getFriendRequests();
+                    getFriends();
+                } else {
+                    console.error('接受好友请求失败：', data);
+                }
+            } catch (error) {
+                console.error('接受好友请求失败：', error);
+            }
+        }
+
+        // 拒绝好友请求
+        async function rejectFriendRequest(requestId) {
+            if (!checkLogin() || !validateUserId()) return; // 确保用户ID有效
+            try {
+                const data = await authorizedFetch(`/api/friends/reject/${requestId}`, {
+                    method: 'PUT'
+                });
+                if (data && data.code === 200) {
+                    alert('已拒绝好友请求');
+                    getFriendRequests();
+                } else {
+                    console.error('拒绝好友请求失败：', data);
+                }
+            } catch (error) {
+                console.error('拒绝好友请求失败：', error);
+            }
+        }
+
+        // 获取好友列表
+        async function getFriends() {
+            if (!checkLogin() || !validateUserId()) return;
+            try {
+                const data = await authorizedFetch(`/api/friends/${currentUserId.value}`);
+                const container = document.getElementById('friendsList');
+                if (data && data.code === 200 && Array.isArray(data.data)) {
+                    container.innerHTML = data.data.map(friend => `
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <p>好友ID: ${friend.friendId}</p>
+                                <button class="btn btn-danger btn-sm" onclick="deleteFriend(${friend.id})">删除好友</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="alert alert-info">暂无好友</div>';
+                }
+            } catch (error) {
+                console.error('获取好友列表失败：', error);
+            }
+        }
+
+        // 删除好友
+        async function deleteFriend(friendId) {
+            if (!checkLogin() || !validateUserId()) return; // 确保用户ID有效
+            try {
+                const data = await authorizedFetch(`/api/friends/${currentUserId.value}/${friendId}`, {
+                    method: 'DELETE'
+                });
+                if (data && data.code === 200) {
+                    alert('已删除好友');
+                    getFriends();
+                } else {
+                    console.error('删除好友失败：', data);
+                }
+            } catch (error) {
+                console.error('删除好友失败：', error);
+            }
+        }
+
+        // 获取关注列表
+        async function getFollowing() {
+            if (!checkLogin() || !validateUserId()) return;
+            try {
+                const data = await authorizedFetch(`/api/follows/following/${currentUserId.value}`);
+                const container = document.getElementById('followingList');
+                if (data && data.code === 200 && Array.isArray(data.data)) {
+                    container.innerHTML = data.data.map(follow => `
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <p>关注用户ID: ${follow.followingId}</p>
+                                <button class="btn btn-danger btn-sm" onclick="unfollowUser(${follow.id})">取消关注</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="alert alert-info">暂无关注</div>';
+                }
+            } catch (error) {
+                console.error('获取关注列表失败：', error);
+            }
+        }
+
+        // 获取粉丝列表
+        async function getFollowers() {
+            if (!checkLogin() || !validateUserId()) return;
+            try {
+                const data = await authorizedFetch(`/api/follows/followers/${currentUserId.value}`);
+                const container = document.getElementById('followersList');
+                if (data && data.code === 200 && Array.isArray(data.data)) {
+                    container.innerHTML = data.data.map(follow => `
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <p>粉丝用户ID: ${follow.followerId}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="alert alert-info">暂无粉丝</div>';
+                }
+            } catch (error) {
+                console.error('获取粉丝列表失败：', error);
+            }
+        }
+
+        // 取消关注
+        async function unfollowUser(followId) {
+            if (!checkLogin() || !validateUserId()) return;
+            try {
+                const data = await authorizedFetch(`/api/follows/${currentUserId.value}/${followId}`, {
+                    method: 'DELETE'
+                });
+                if (data && data.code === 200) {
+                    alert('已取消关注');
+                    getFollowing();
+                } else {
+                    console.error('取消关注失败：', data);
+                }
+            } catch (error) {
+                console.error('取消关注失败：', error);
+            }
+        }
+    </script>
+</body>
+</html> 

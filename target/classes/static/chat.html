@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天测试</title>
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/nav.css" rel="stylesheet">
+    <style>
+        .container { margin-top: 30px; }
+        .card { margin-bottom: 20px; }
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .message.sent {
+            background-color: #007bff;
+            color: white;
+            margin-left: 20%;
+        }
+        .message.received {
+            background-color: #e9ecef;
+            margin-right: 20%;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <div class="nav-container">
+        <ul class="nav-list">
+            <li class="nav-item">
+                <a href="/social.html">社交关系</a>
+            </li>
+            <li class="nav-item">
+                <a href="/test.html">帖子测试</a>
+            </li>
+            <li class="nav-item active">
+                <a href="/chat.html">聊天测试</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <h2>聊天测试</h2>
+        
+        <!-- 聊天设置 -->
+        <div class="card">
+            <div class="card-header">
+                <h4>聊天设置</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">当前用户ID</label>
+                            <input type="number" class="form-control" id="currentUserId" value="1" placeholder="请输入当前用户ID">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">目标用户ID</label>
+                            <input type="number" class="form-control" id="targetUserId" value="2" placeholder="请输入目标用户ID">
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="startChat()">开始聊天</button>
+            </div>
+        </div>
+
+        <!-- 聊天区域 -->
+        <div class="card">
+            <div class="card-header">
+                <h4>聊天窗口</h4>
+            </div>
+            <div class="card-body">
+                <div id="chatContainer" class="chat-container"></div>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="messageInput" placeholder="输入消息...">
+                    <button class="btn btn-primary" onclick="sendMessage()">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 检查登录状态：如果未登录则跳转到登录页面
+        function checkLogin() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return false;
+            }
+            return true;
+        }
+
+        // 退出登录：清除token并跳转到登录页面
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        // AJAX全局设置：为所有请求添加Authorization头，并统一处理错误
+        $.ajaxSetup({
+            beforeSend: function(xhr) {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                }
+            },
+            error: function(xhr, status, error) {
+                let errorMessage = '请求失败，请检查网络或服务器日志。';
+                if (xhr.responseJSON && xhr.responseJSON.msg) {
+                    errorMessage = xhr.responseJSON.msg;
+                } else if (xhr.responseText) {
+                    errorMessage = xhr.responseText.substring(0, 100);
+                }
+                alert('错误: ' + errorMessage);
+
+                if (xhr.status === 401) {
+                    alert('登录状态已失效，请重新登录。');
+                    logout();
+                }
+            }
+        });
+
+        // 设置当前页面的导航项为激活状态
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPage = window.location.pathname;
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                const link = item.querySelector('a');
+                if (link.getAttribute('href') === currentPage) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // 页面加载时检查登录状态
+            if (checkLogin()) {
+                // 这里可以根据需要加载初始数据，例如获取默认的聊天历史
+                // startChat(); // 如果想在页面加载时自动连接WebSocket
+            }
+        });
+
+        const currentUserId = document.getElementById('currentUserId');
+        const targetUserId = document.getElementById('targetUserId');
+        const messageInput = document.getElementById('messageInput');
+        const chatContainer = document.getElementById('chatContainer');
+        let ws = null;
+
+        // 开始聊天
+        function startChat() {
+            if (!checkLogin()) return; // 检查登录状态
+            if (ws) {
+                ws.close();
+            }
+
+            // 注意：WebSocket连接无法直接通过 $.ajaxSetup 来添加Authorization头。
+            // JWT Token通常需要在WebSocket握手时通过查询参数或自定义协议传递。
+            // 在这里我们简化处理，假设WebSocket端点不需要Authorization头，或者后端有其他方式验证。
+            // 如果需要，您可能需要修改后端WebSocket配置以支持JWT通过查询参数传递。
+            // 或者在建立WebSocket连接时，手动在URL中携带Token，例如：
+            // const token = localStorage.getItem('token');
+            // ws = new WebSocket(`ws://localhost:8080/ws/chat/${currentUserId.value}/${targetUserId.value}?token=${token}`);
+            ws = new WebSocket(`ws://localhost:8080/ws/chat/${currentUserId.value}/${targetUserId.value}`);
+
+            ws.onopen = function() {
+                console.log('WebSocket连接已建立');
+                loadChatHistory();
+            };
+
+            ws.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                displayMessage(message, false);
+            };
+
+            ws.onclose = function() {
+                console.log('WebSocket连接已关闭');
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket错误:', error);
+                alert('聊天连接错误，请重试');
+            };
+        }
+
+        // 发送消息
+        function sendMessage() {
+            if (!checkLogin()) return; // 检查登录状态
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('请先开始聊天');
+                return;
+            }
+
+            const content = messageInput.value.trim();
+            if (!content) {
+                return;
+            }
+
+            const message = {
+                senderId: currentUserId.value,
+                receiverId: targetUserId.value,
+                content: content,
+                timestamp: new Date().toISOString()
+            };
+
+            ws.send(JSON.stringify(message));
+            displayMessage(message, true);
+            messageInput.value = '';
+        }
+
+        // 显示消息
+        function displayMessage(message, isSent) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+            messageDiv.innerHTML = `
+                <div>${message.content}</div>
+                <small>${new Date(message.timestamp).toLocaleString()}</small>
+            `;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 加载聊天历史
+        async function loadChatHistory() {
+            if (!checkLogin()) return; // 检查登录状态
+            try {
+                const token = localStorage.getItem('token'); // 获取token
+                const response = await fetch(`/api/chat/history/${currentUserId.value}/${targetUserId.value}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}` // 添加Authorization头
+                    }
+                });
+                const responseData = await response.json();
+                chatContainer.innerHTML = '';
+                
+                if (responseData.code === 200 && Array.isArray(responseData.data)) {
+                    responseData.data.forEach(message => {
+                        displayMessage(message, message.senderId === currentUserId.value);
+                    });
+                } else {
+                    chatContainer.innerHTML = '<div class="alert alert-info">暂无聊天记录</div>';
+                }
+            } catch (error) {
+                console.error('加载聊天历史失败:', error);
+                chatContainer.innerHTML = '<div class="alert alert-danger">加载聊天历史失败</div>';
+            }
+        }
+
+        // 按Enter发送消息
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html> 

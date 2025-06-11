@@ -7,6 +7,14 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+
+// Spring Security 的主要配置类，负责：
+// 配置安全规则，定义哪些 URL 需要认证，哪些可以直接访问
+// 配置密码加密器
+// 配置认证管理器
+// 配置 JWT 过滤器
+// 配置跨域请求处理
+
 @Configuration
 public class SecurityConfig {
     @Autowired

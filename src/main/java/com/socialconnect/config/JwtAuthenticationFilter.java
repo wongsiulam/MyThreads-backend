@@ -15,6 +15,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+// JwtAuthenticationFilter.java
+// JWT 认证过滤器的实现，主要功能：
+// 从请求头中提取 JWT token
+// 验证 token 的有效性
+// 解析 token 获取用户信息
+// 将用户信息设置到 SecurityContext 中
+// 处理认证异常
+
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
