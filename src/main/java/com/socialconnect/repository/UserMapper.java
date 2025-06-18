@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.socialconnect.entity.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
+import java.util.List;
 
 @Mapper
 public interface UserMapper extends BaseMapper<User> {
@@ -11,4 +12,7 @@ public interface UserMapper extends BaseMapper<User> {
     
     @Select("SELECT COUNT(*) FROM user WHERE id = #{id}")
     boolean existsById(Long id);
+
+    @Select("SELECT * FROM user WHERE phone LIKE CONCAT('%', #{keyword}, '%') OR nickname LIKE CONCAT('%', #{keyword}, '%')")
+    List<User> searchUsers(String keyword);
 }
