@@ -109,12 +109,9 @@ public class PostController {
      * 点赞帖子
      */
     @PostMapping("/{postId}/like")
-    public Result<Void> likePost(@PathVariable Long postId) {
-        boolean success = postService.incrementLikesCount(postId);
-        if (!success) {
-            return Result.error("点赞失败");
-        }
-        return Result.success();
+    public Result<Integer> likePost(@PathVariable Long postId) {
+        int count = postService.incrementLikesCount(postId);
+        return Result.success(count);
     }
 
     /**

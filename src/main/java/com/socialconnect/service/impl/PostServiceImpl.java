@@ -65,13 +65,13 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public boolean incrementLikesCount(Long postId) {
+    public int incrementLikesCount(Long postId) {
         Post post = postMapper.selectById(postId);
         if (post == null) {
-            return false;
+            return 0;
         }
         post.setLikesCount(post.getLikesCount() + 1);
-        return postMapper.updateById(post) > 0;
+        return post.getLikesCount();
     }
 
     @Override

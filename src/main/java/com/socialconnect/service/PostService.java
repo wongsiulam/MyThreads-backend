@@ -51,7 +51,7 @@ public interface PostService {
      * @param postId 帖子ID
      * @return 是否成功
      */
-    boolean incrementLikesCount(Long postId);
+    int incrementLikesCount(Long postId);
 
     /**
      * 减少帖子点赞数
