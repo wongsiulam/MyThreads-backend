@@ -40,8 +40,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             requestURI.startsWith("/api/user/register") ||
             requestURI.startsWith("/api/user/check-phone") ||
             requestURI.startsWith("/uploads/") || // 允许访问上传目录
-            requestURI.equals("/login.html") ||   // 明确允许访问登录页面
-            requestURI.equals("/test.html") ||    // 明确允许访问测试页面
             requestURI.equals("/") ||             // 允许访问根路径
             requestURI.endsWith(".html") ||       // 允许所有HTML文件
             requestURI.endsWith(".css") ||        // 允许所有CSS文件
