@@ -66,11 +66,20 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public int incrementLikesCount(Long postId) {
+        // 1. 从数据库查询
         Post post = postMapper.selectById(postId);
         if (post == null) {
+            // 帖子不存在，可以根据业务返回0或抛出异常
             return 0;
         }
+
+        // 2. 在内存中修改对象属性
         post.setLikesCount(post.getLikesCount() + 1);
+
+        // 3. !! 关键：将修改后的对象更新回数据库 !!
+        postMapper.updateById(post);
+
+        // 4. 返回最新的点赞数
         return post.getLikesCount();
     }
 
