@@ -20,6 +20,8 @@ public class MessageController {
     public void sendMessage(@RequestBody Message message, HttpServletRequest request) {
         // 可根据principal获取当前登录用户ID，设置为senderId
         // message.setSenderId(currentUserId);
+        Long currentUserId = (Long) request.getAttribute("userId");
+        message.setSenderId(currentUserId);
         messageService.sendMessage(message);
     }
 
